@@ -140,6 +140,9 @@
                     <tbody id="results-table"></tbody>
                 </table>
             </div>
+            <button id="save-results-btn" onclick="submitResults()" style="padding: 15px 30px; font-size: 1.2rem; background-color: #e6b3b3; border-radius: 10px;">
+                Guardar Resultados
+            </button>
         </div>
     </div>
     <button id="previous-button" onclick="handlePrevious()">Anterior</button>
@@ -205,7 +208,11 @@
 
         function handleNo() {
             recordAnswer("No");
-            currentStep = 2; // Skip Q2 if "No" is selected
+            currentStep = 4; 
+            if (currentStep >= 4) {
+                currentStep = 0;
+                currentSituation++;
+            }
             updateScreen();
         }
 
@@ -234,7 +241,7 @@
                 currentStep--;
             } else if (currentSituation > 0) {
                 currentSituation--;
-                currentStep = 3; // Go to the last step of the previous situation
+                currentStep = 3; 
             }
             updateScreen();
         }
@@ -257,7 +264,24 @@
                     <td>${answers[3] || ""}</td>
                 </tr>
             `).join("");
+            submitResults();
         }
+        function submitResults() {
+    const userName = prompt("Ingrese su nombre:");
+    if (!userName) return alert("Debe ingresar un nombre.");
+
+    fetch("http://localhost:3000/save-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userName, results })
+    })
+    .then(response => response.text())
+    .then(data => {
+        alert("Resultados guardados correctamente.");
+        document.getElementById("save-results-btn").style.display = "none"; 
+    })
+    .catch(error => console.error("Error submitting results:", error));
+}
 
         updateScreen();
     </script>

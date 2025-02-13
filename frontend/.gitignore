@@ -1,0 +1,11 @@
+# Ignore backend files
+.env
+server.js
+db.js
+database.sql
+
+# Ignore node_modules (if exists)
+node_modules/
+
+# Ignore logs (optional)
+*.log
