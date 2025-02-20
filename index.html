@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preguntas Interactivas</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #ffe6e6;
+        }
+        .container {
+            text-align: center;
+            background: #ffcccb;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 90%;
+        }
+        #situation-text {
+            font-size: 1.8rem;
+            margin-bottom: 20px;
+            color: #333;
+        }
+        #question-text {
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            color: #555;
+        }
+        .buttons {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        button {
+            padding: 15px 25px;
+            font-size: 1.2rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s, background-color 0.3s;
+        }
+        button:hover {
+            transform: scale(1.1);
+            background-color: #ffe4e1;
+        }
+        #yes-button {
+            background-color: #ffa726;
+            color: #fff;
+        }
+        #no-button {
+            background-color: #90caf9;
+        }
+        #correct-button {
+            background-color: #d1c4e9;
+        }
+        #incorrect-button {
+            background-color: #fff59d;
+        }
+        .hidden {
+            display: none;
+        }
+        .result-table-container {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #ffcccc;
+            font-size: 1.2rem;
+        }
+        td {
+            font-size: 1rem;
+        }
+        #previous-button {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            background-color: #ffd480;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        #previous-button:hover {
+            background-color: #ffc107;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="situation-screen">
+            <p id="situation-text"></p>
+            <div id="question-container">
+                <p id="question-text"></p>
+                <div class="buttons">
+                    <button id="yes-button" class="hidden" onclick="handleYes()">Sí</button>
+                    <button id="no-button" class="hidden" onclick="handleNo()">No</button>
+                    <button id="correct-button" class="hidden" onclick="handleCorrect()">☀️</button>
+                    <button id="incorrect-button" class="hidden" onclick="handleIncorrect()">🌙</button>
+                </div>
+            </div>
+        </div>
+        <div id="results-prompt" class="hidden">
+            <button onclick="showResults()" style="padding: 15px 30px; font-size: 1.2rem; background-color: #b3e6b3; border-radius: 10px;">Mostrar Resultados</button>
+        </div>
+        <div id="results-screen" class="hidden">
+            <h3 style="color: #333;">Resultados</h3>
+            <div class="result-table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Situación</th>
+                            <th>P1</th>
+                            <th>P2</th>
+                            <th>P3</th>
+                            <th>P4</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-table"></tbody>
+                </table>
+            </div>
+            <button id="save-results-btn" onclick="submitResults()" style="padding: 15px 30px; font-size: 1.2rem; background-color: #e6b3b3; border-radius: 10px;">
+                Guardar Resultados
+            </button>
+        </div>
+    </div>
+    <button id="previous-button" onclick="handlePrevious()">Anterior</button>
+
+    <script>
+    
+        const situations = [
+            { text: "Toda la clase participó en un concurso de cuentos. Ema realmente quería ganar. Mientras no estaba en la escuela, se anunciaron los resultados del concurso: Alicia fue la ganadora. Al día siguiente, Alicia vio a Ema y le dijo: “lo siento por tu cuento”.  “¿Qué querés decir?” dijo Ema. “Oh, nada” dijo Alicia.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "Quién ganó la competencia?", "Alicia se dio cuenta que Ema no había escuchado los resultados de la competencia?"] },
+            { text: "Roberto acaba de comenzar en una escuela nueva. Él dijo a su nuevo amigo, Andrés, “mi mama es una moza en esta escuela”. Luego Clara vino y dijo: “Odio las mozas. Son horribles. “¿Querés que vayamos a jugar por ahí?” Andrés le preguntó a Clara. “No” contestó ella “no me siento muy bien”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué trabajo tiene la mamá de Roberto?", "¿Sabía Clara que la mamá de Roberto era moza?"] },
+            { text: "Miguel estaba en uno de los baños de la escuela. José y Pedro estaban en las piletas al lado. José dijo “Conoces al chico nuevo de la clase, su nombre es Miguel. No, se ve realmente raro!”. Miguel salió del baño. Pedro dijo “Oh, hola Miguel, vas a jugar fútbol ahora?”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Dónde estaban hablando José y Pedro?", "¿Sabía José que Miguel estaba en los cubículos?"] },
+            { text: "Karina ayudó a su mamá a hacer una torta de manzana para su tío que los vino a visitar. Ella lo llevó hasta la cocina. “lo hice sólo para vos” dijo Karina. “Mmm”, contestó el tío Tomás, “eso se ve delicioso. Yo adoro las tortas, excepto la de manzana, ¡por supuesto!”", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué clase de pastel hizo Karina?", "¿Sabía el tío Tomás que el pastel era de manzana?"] },
+            { text: "Jaime compró a Ramiro un avión de juguete para su cumpleaños. Unos meses después, estaban jugando con él, cuando Jaime accidentalmente lo tiró. “No te preocupes” dijo –Ramiro, “Nunca me gustó de todos modos. Alguien me lo regaló para mi cumpleaños”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "Quién ganó la competencia?", "¿Recuerdas a Ramiro que Jaime le había dado el avión para su cumpleaños?"] },
+            { text: "Sofía tiene el pelo rubio corto. Estaba en la casa de su tía Carola. Sonó el timbre. Era María, una vecina. María dijo “Hola”, luego miró a Sofía y dijo “Oh, creo que no conozco a este pequeño muchacho. ¿Cómo te llamás?” La tía Carola dijo “¿Quién quiere una taza de té?”", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "En la casa de quien estaba Sofía?", "¿Sabía María que Sofía era una niña?"] },
+            { text: "La maestra tenía algo que contar a su clase, “Uno de los niños de nuestra clase, Simon, está muy enfermo” ella dijo. Toda la clase estaba muy triste y sentados quietos cuando una pequeña niña, Betty, llegó tarde. “¿Han escuchado mi nuevo chiste del niño enfermo?” ella preguntó. La maestra le dijo “Sentate y vamos a trabajar”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué le contó la maestra a la clase al inicio de la historia?", "Sabía Betty que Simón estaba enfermo?"] },
+            { text: "Tiago estaba en un restaurante. Él derramó el café en el piso por accidente. Javier era otra persona que estaba en el restaurante, parado al lado de la caja esperando para pagar. Tiago se acercó a Javier y le dijo “Lo siento mucho, pero he derramado mi café. ¿Podría usted ir a pasar el trapo?”", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Dónde ocurrió la historia?", "Sabía Tiago que Javier era un cliente?"] },
+            { text: "Yenny se acababa de mudar a su nueva casa. Ella fue de compras con su mamá y compró unas cortinas nuevas. Cuando Yenny las acababa de colgar, su mejor amiga Alicia vino y le dijo, “Oh, esas cortinas son horribles, ¿las vas a cambiar por unas nuevas?”. Yenny preguntó “te gusta el resto de mi cuarto?”", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué acababa de comprar Yenny?", "Sabía Alicia que las cortinas eran nuevas?"] },
+            { text: "La madre de Elena estaba haciendo una fiesta sorpresa para el cumpleaños de Elena. Ella invitó a Nicole y le dijo, “No le cuentes a nadie, especialmente Elena!”. El día antes de la fiesta Nicole y Elena estaban jugando juntas y Nicole rompió su vestido nuevo. “Oh!” dijo Nicole, “Iba a usar esto para tu fiesta.” ¿Qué fiesta?” dijo Elena. “Vamos” dijo Nicole “Vamos y veamos si mi mama puede arreglarlo.”", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Para quién era la fiesta sorpresa?", "¿Recuerdas Nicole que la fiesta era sorpresa?"] },
+            { text: "Toda la clase participó de un concurso de poesía. Juana realmente quería ganar. Mientras no estaba, se anunciaron los resultados de la competencia. María era la ganadora. Al día siguiente, Juana se chocó con María. María dijo “Cómo te sentís?”, “Bien, gracias” dijo Juana. “Oh, bien” dijo María.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "Quién ganó el concurso de historias?", "¿Sabía María que Juana no había escuchado los resultados de la competencia?"] },
+            { text: "Diego acababa de comenzar en una escuela nueva. El le dijo a su nuevo amigo, Miguel, “Mi mamá es maestra de esta escuela”. Luego vino Joaquín. “Odio la escuela” les dijo, “es tan pequeña” “Querés venir a jugar? Miguel le preguntó a Joaquín, “No” contestó “No me siento bien”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué trabajo tiene la mamá de Diego?", "Joaquín sabía que la madre de Diego era maestra?"] },
+            { text: "Juan estaba en uno de los baños de su escuela. Ariel y Franco estaban en las piletas al lado. Ariel dijo “Conoces al muchacho nuevo de la clase, su nombre es Juan. No es copado?!”. Juan salió del baño. Franco dijo “Oh, hola Juan. ¿Vas a jugar fútbol ahora?”..", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Dónde estaban Ariel y Franco mientras hablaban?", "Ariel sabía que Juan estaba en los cubículos?"] },
+            { text: "Cata ayudó a su mamá a hacer una torta de frutas para su vecino cuando él vino a visitarlas. Ella lo llevó afuera de la cocina. “La hice sólo para vos”, dijo Cata. “Mmm” contestó su vecino. “Se ve buenísima. ¡Yo adoro las tortas, especialmente de fruta!", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué clase de pastel había hecho Cata?", "¿Sabía el vecino que el pastel era de fruta?"] },
+            { text: "Santino le compró a Roberto un auto nuevo de juguete para su cumpleaños. Unos meses después, ellos estaban jugando, cuando se le cayó a Santino. “No te preocupes” dijo Roberto, “Sólo fue un accidente”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué le dio Santino a Roberto para su cumpleaños?", "Simón sabía que Roberto le había dado el juguete para su cumpleaños?"] },
+            { text: "Lilly tenía cabello corto castaño. Estaba en la casa de su tío Teo. Sonó el timbre. Era una vecina. Ella dijo “Hola”, luego miró a Lilly y le dijo “Oh, creo que no conozco a esta niñita. ¿Cómo es tu nombre?” El tío Teo dijo “Alguien quiere te?", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿En casa de quién estaba Lilly?", "¿Sabía la Sra. Suarez que Lilly era una nena?"] },
+            { text: "La maestra Sra. Juarez tenía algo que decir a la clase, “Ustedes saben que Jorge de nuestra clase, bueno, está seriamente enfermo” ella dijo. Toda la clase estaba muy triste sentados quietos cuando una pequeña niña, Andrea, llegó tarde. “Acabo de ir al dentista” ella dijo. La maestra le dijo “Siéntate y comienza a trabajar”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué le dijo la maestra a la clase al inicio de la historia?", "¿Sabía Andrea que Jorge estaba enfermo?"] },
+            { text: "Lucas y Gonzalo estaban tomando un trago en un restaurante. Alan derramó su bebida en el piso por accidente. El dijo a Gonzalo “Oh, amigo, Derramé mi bebida!” dijo Gonzalo. “Pediré otra”", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Dónde ocurrió la historia?", "¿Sabía Lucas que Gonzalo era un cliente?"] },
+            { text: "Marina acababa de mudarse a su nueva casa. Marina fue de compras con su mamá y compró una alfombra nueva para su habitación. Cuando Marina acababa de colocar, su mejor amiga, Stefanía, llegó y le dijo, “Oh, tu nueva alfombra es igual que la mía nueva” Marina preguntó, “Te gusta la casa?”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Qué acababa de comprar Marina?", "¿Stefanía sabía que la alfombra era nueva?"] },
+            { text: "La madre de Ana estaba haciendo una fiesta sorpresa para el cumpleaños de Ana. Ella invitó a Valeria y le dijo “¡no le digas a nadie, especialmente a Ana!”. El día antes de la fiesta, Ana y Valeria estaban jugando juntas y Ana manchó su nueva chomba. “Oh!” dijo Ana, “mi mamá se va a enojar”. “No te preocupes” dijo Valeria. “Vamos a ver si mi mamá puede limpiarla”.", questions: ["En la historia alguien dijo algo que no debiera haber dicho?", "¿Que dijo que no debiera haber dicho?", "¿Para quién era la fiesta sorpresa?", "Ana sabía que habían planeado una fiesta sorpresa?"] },
+            
+        ];
+
+        let currentSituation = 0;
+        let currentStep = 0;
+        const results = [];
+
+        function updateScreen() {
+            if (currentSituation < situations.length) {
+                const situation = situations[currentSituation];
+                document.getElementById("situation-text").textContent = situation.text;
+                document.getElementById("question-text").textContent = situation.questions[currentStep];
+
+                if (currentStep === 0) {
+                    document.getElementById("yes-button").classList.remove("hidden");
+                    document.getElementById("no-button").classList.remove("hidden");
+                    document.getElementById("correct-button").classList.add("hidden");
+                    document.getElementById("incorrect-button").classList.add("hidden");
+                } else {
+                    document.getElementById("yes-button").classList.add("hidden");
+                    document.getElementById("no-button").classList.add("hidden");
+                    document.getElementById("correct-button").classList.remove("hidden");
+                    document.getElementById("incorrect-button").classList.remove("hidden");
+                }
+            } else {
+                document.getElementById("situation-screen").classList.add("hidden");
+                document.getElementById("results-prompt").classList.remove("hidden");
+            }
+        }
+
+        function handleYes() {
+            recordAnswer("Sí");
+            currentStep++;
+            updateScreen();
+        }
+
+        function handleNo() {
+            recordAnswer("No");
+            currentStep = 4; 
+            if (currentStep >= 4) {
+                currentStep = 0;
+                currentSituation++;
+            }
+            updateScreen();
+        }
+
+        function handleCorrect() {
+            recordAnswer("☀️");
+            currentStep++;
+            if (currentStep === 4) {
+                currentStep = 0;
+                currentSituation++;
+            }
+            updateScreen();
+        }
+
+        function handleIncorrect() {
+            recordAnswer("🌙");
+            currentStep++;
+            if (currentStep === 4) {
+                currentStep = 0;
+                currentSituation++;
+            }
+            updateScreen();
+        }
+
+        function handlePrevious() {
+            if (currentStep > 0) {
+                currentStep--;
+            } else if (currentSituation > 0) {
+                currentSituation--;
+                currentStep = 3; 
+            }
+            updateScreen();
+        }
+
+        function recordAnswer(answer) {
+            if (!results[currentSituation]) results[currentSituation] = [];
+            results[currentSituation][currentStep] = answer;
+        }
+
+        function showResults() {
+            document.getElementById("results-prompt").classList.add("hidden");
+            document.getElementById("results-screen").classList.remove("hidden");
+            const table = document.getElementById("results-table");
+            table.innerHTML = results.map((answers, index) => `
+                <tr>
+                    <td>Situación ${index + 1}</td>
+                    <td>${answers[0] || ""}</td>
+                    <td>${answers[1] || ""}</td>
+                    <td>${answers[2] || ""}</td>
+                    <td>${answers[3] || ""}</td>
+                </tr>
+            `).join("");
+            submitResults();
+        }
+        function submitResults() {
+    const userName = prompt("Ingrese su nombre:");
+    if (!userName) return alert("Debe ingresar un nombre.");
+
+    fetch("http://localhost:3000/save-results", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userName, results })
+    })
+    .then(response => response.text())
+    .then(data => {
+        alert("Resultados guardados correctamente.");
+        document.getElementById("save-results-btn").style.display = "none"; 
+    })
+    .catch(error => console.error("Error submitting results:", error));
+}
+
+        updateScreen(); 
+    </script>
+</body>
+</html>
